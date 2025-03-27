@@ -34,11 +34,7 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.config.configcenter.ConfigItem;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
-import org.apache.dubbo.common.utils.CollectionUtils;
-import org.apache.dubbo.common.utils.ConcurrentHashSet;
-import org.apache.dubbo.common.utils.JsonUtils;
-import org.apache.dubbo.common.utils.NamedThreadFactory;
-import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.common.utils.*;
 import org.apache.dubbo.metadata.MappingChangedEvent;
 import org.apache.dubbo.metadata.MappingListener;
 import org.apache.dubbo.metadata.MetadataInfo;
@@ -48,15 +44,7 @@ import org.apache.dubbo.metadata.report.identifier.SubscriberMetadataIdentifier;
 import org.apache.dubbo.metadata.report.support.AbstractMetadataReport;
 import org.apache.dubbo.metadata.report.support.WrapAbstractMetadataReport;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -288,40 +276,12 @@ public class PolarisMetadataReport extends AbstractMetadataReport {
         another.ifPresent(proxyReport -> proxyReport.getMetadataReport().removeServiceAppMappingListener(serviceKey, listener));
     }
 
-    /**
-     * dubbo 根据 serviceKey（接口名称）查找提供该接口的 application 到底有哪些
-     *
-     * @param serviceKey dubbo 的 interface name
-     * @param listener   {@link MappingListener}
-     * @param url        {@link URL}
-     * @return {@link Set<String>} 提供此接口的所用应用列表名称
-     */
-    @Override
-    public Set<String> getServiceAppMapping(String serviceKey, MappingListener listener, URL url) {
-        MappingListener multiWatch = new MappingListener() {
-
-            @Override
-            public void onEvent(MappingChangedEvent event) {
-                Set<String> result = commonGetServiceAppMapping(serviceKey, url);
-                another.ifPresent(proxyReport -> result.addAll(proxyReport.getMetadataReport().getServiceAppMapping(serviceKey, url)));
-                event = new MappingChangedEvent(serviceKey, result);
-                listener.onEvent(event);
-            }
-
-            @Override
-            public void stop() {
-                listener.stop();
-            }
-        };
-
-        mappingListeners.computeIfAbsent(serviceKey, s -> new ConcurrentHashSet<>());
-        mappingListeners.get(serviceKey).add(multiWatch);
-        Set<String> result = commonGetServiceAppMapping(serviceKey, url);
-        if (CollectionUtils.isEmpty(result)) {
-            return another.map(proxyReport -> proxyReport.getMetadataReport().getServiceAppMapping(serviceKey, multiWatch, url))
-                    .orElse(Collections.emptySet());
+    private static Set<String> getAppNames(ServiceContractProto.ServiceContract contract) {
+        Set<String> applications = new HashSet<>();
+        for (ServiceContractProto.InterfaceDescriptor descriptor : contract.getInterfacesList()) {
+            applications.add(descriptor.getPath());
         }
-        return Collections.emptySet();
+        return applications;
     }
 
     /**
@@ -337,7 +297,7 @@ public class PolarisMetadataReport extends AbstractMetadataReport {
         if (CollectionUtils.isEmpty(result)) {
             return another.map(proxyReport -> proxyReport.getMetadataReport().getServiceAppMapping(serviceKey, url)).orElse(Collections.emptySet());
         }
-        return Collections.emptySet();
+        return result;
     }
 
     private Set<String> commonGetServiceAppMapping(String serviceKey, URL url) {
@@ -470,12 +430,40 @@ public class PolarisMetadataReport extends AbstractMetadataReport {
         return another.map(proxyReport -> proxyReport.doGetSubscribedURLs(identifier)).orElse(null);
     }
 
-    private static Set<String> getAppNames(ServiceContractProto.ServiceContract contract) {
-        Set<String> applications = new HashSet<>();
-        for (ServiceContractProto.InterfaceDescriptor descriptor : contract.getInterfacesList()) {
-            applications.add(descriptor.getName());
+    /**
+     * dubbo 根据 serviceKey（接口名称）查找提供该接口的 application 到底有哪些
+     *
+     * @param serviceKey dubbo 的 interface name
+     * @param listener   {@link MappingListener}
+     * @param url        {@link URL}
+     * @return {@link Set<String>} 提供此接口的所用应用列表名称
+     */
+    @Override
+    public Set<String> getServiceAppMapping(String serviceKey, MappingListener listener, URL url) {
+        MappingListener multiWatch = new MappingListener() {
+
+            @Override
+            public void onEvent(MappingChangedEvent event) {
+                Set<String> result = commonGetServiceAppMapping(serviceKey, url);
+                another.ifPresent(proxyReport -> result.addAll(proxyReport.getMetadataReport().getServiceAppMapping(serviceKey, url)));
+                event = new MappingChangedEvent(serviceKey, result);
+                listener.onEvent(event);
+            }
+
+            @Override
+            public void stop() {
+                listener.stop();
+            }
+        };
+
+        mappingListeners.computeIfAbsent(serviceKey, s -> new ConcurrentHashSet<>());
+        mappingListeners.get(serviceKey).add(multiWatch);
+        Set<String> result = commonGetServiceAppMapping(serviceKey, url);
+        if (CollectionUtils.isEmpty(result)) {
+            return another.map(proxyReport -> proxyReport.getMetadataReport().getServiceAppMapping(serviceKey, multiWatch, url))
+                    .orElse(Collections.emptySet());
         }
-        return applications;
+        return result;
     }
 
     private static String formatMappingName(String key) {

@@ -51,6 +51,7 @@ public class Main {
             server.stop(1);
         }));
         server.start();
+        System.out.println("dubbo service started");
     }
 
     private static class EchoClientHandler implements HttpHandler {
