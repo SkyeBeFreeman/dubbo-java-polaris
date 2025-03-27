@@ -82,7 +82,7 @@ public class CircuitBreakerFilter extends PolarisOperatorDelegate implements Fil
         // 如果是熔断，只选择第一个 DubboServiceInfo 进行作为熔断信息
         DubboServiceInfo firstService = serviceInfos.get(0);
 
-        InvokeContext.RequestContext context = new InvokeContext.RequestContext(createCalleeService(firstService), firstService.getDubboInterface());
+        InvokeContext.RequestContext context = new InvokeContext.RequestContext(createCalleeService(firstService), "dubbo", "dubbo", firstService.getDubboInterface());
         context.setSourceService(new ServiceKey());
         context.setResultToErrorCode(this);
         InvokeHandler handler = circuitBreakAPI.makeInvokeHandler(context);

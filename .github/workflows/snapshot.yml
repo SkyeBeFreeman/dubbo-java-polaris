@@ -4,8 +4,8 @@ name: Snapshot
 on:
   push:
     branches:
-      - main
       - dubbo-3.2.x
+      - dubbo-2.x
 
 jobs:
   check-snapshot:

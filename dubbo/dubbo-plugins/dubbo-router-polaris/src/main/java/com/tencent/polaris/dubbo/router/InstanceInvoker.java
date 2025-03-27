@@ -193,6 +193,11 @@ public class InstanceInvoker<T> implements Instance, Invoker<T> {
     }
 
     @Override
+    public Long getCreateTime() {
+        return defaultInstance.getCreateTime();
+    }
+
+    @Override
     public int compareTo(Instance o) {
         return defaultInstance.compareTo(o);
     }

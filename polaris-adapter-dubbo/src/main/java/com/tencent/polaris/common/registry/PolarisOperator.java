@@ -63,6 +63,7 @@ import com.tencent.polaris.factory.ConfigAPIFactory;
 import com.tencent.polaris.factory.api.DiscoveryAPIFactory;
 import com.tencent.polaris.factory.api.RouterAPIFactory;
 import com.tencent.polaris.factory.config.ConfigurationImpl;
+import com.tencent.polaris.factory.config.global.AdminConfigImpl;
 import com.tencent.polaris.factory.config.global.ServerConnectorConfigImpl;
 import com.tencent.polaris.plugins.stat.prometheus.handler.PrometheusHandlerConfig;
 import com.tencent.polaris.ratelimit.api.core.LimitAPI;
@@ -128,6 +129,7 @@ public class PolarisOperator {
 
         PrometheusHandlerConfig prometheusHandlerConfig = configuration.getGlobal().getStatReporter()
                 .getPluginConfig("prometheus", PrometheusHandlerConfig.class);
+        AdminConfigImpl adminConfig = configuration.getGlobal().getAdmin();
 
         // 如果设置了改开关
         if (parameters.containsKey(Consts.KEY_METRIC_TYPE)) {
@@ -160,7 +162,7 @@ public class PolarisOperator {
                     }
                     configuration.getGlobal().getStatReporter().setEnable(true);
                     prometheusHandlerConfig.setType("pull");
-                    prometheusHandlerConfig.setPort(port);
+                    adminConfig.setPort(port);
                     break;
             }
         } else {
